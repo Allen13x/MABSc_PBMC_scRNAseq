@@ -1,5 +1,5 @@
 
-# Import libraries --------------------------------------------------------
+# Import Libraries --------------------------------------------------------
 library(Seurat)
 library(patchwork)
 library(RColorBrewer)
@@ -106,5 +106,5 @@ anchors<- FindIntegrationAnchors(object.list=datasc,anchor.features=features)
 scdata<-IntegrateData(anchorset = anchors)
 
 ## Optional Save
-saveRDS(scdatac,'write_R/integrated.rds')
+saveRDS(scdata,'write_R/scdata.rds')
 
