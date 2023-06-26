@@ -7,6 +7,7 @@ library(RColorBrewer)
 library(Matrix)
 library(readxl)
 library(pheatmap)
+library(fgsea)
 library(ggpubr)
 library(enrichR)
 library(rstatix)
@@ -437,5 +438,96 @@ for (i in 1:dim(Volcanlist)[1]){
 
 
 # GSEA --------------------------------------------------------------------
+
+## Create GSEA database
+
+## Download your Pathway dataset --- we use this one :
+## https://maayanlab.cloud/Enrichr/geneSetLibrary?mode=text&libraryName=BioPlanet_2019
+###
+read_delim('Bioplanet_2019.txt',delim='|',col_names = c('GO')) %>%
+  mutate(GO=str_remove(GO,'\t'),
+         GO=str_replace(GO,'\t',';')) %>%
+  separate(GO,c('GO','ID'),sep=';') ->GODB
+
+split(GODB %>% 
+        dplyr::select(ID),seq(nrow(GODB%>%dplyr::select(ID))))->GSEA_list
+
+
+names(GSEA_list)<-GODB$GO
+
+
+lapply(GSEA_list,function(x) str_split(str_remove(x,'\t$'),"\t")[[1]])->GSEA_list
+
+
+gsea_list<-list()
+
+for (i in 1:dim(Volcanlist)[1]){
+  
+  z1=str_replace_all(Volcanlist[i,2],' ',',')
+  z2=str_replace_all(Volcanlist[i,2],' ','_')
+  bind_rows(Deg_list,.id='aa') %>% 
+    separate(aa,c('Cluster','Comparison'),sep='_')%>%
+    filter(Comparison==z1) %>% 
+    filter(!str_detect(Genes,'^MT|^RP|^AC|^X|^Y|^AL')) %>%
+    filter(Cluster==Volcanlist[i,1]) %>%
+    arrange(desc(avg_log2FC)) %>% 
+    pull(avg_log2FC,name=Genes)->val_ordered
+
+  index=paste(Volcanlist[i,1],z1,sep='_')
+  print(index)
+  fgsea(GSEA_list,
+        val_ordered)->gsea
+  
+  gsea_list[[index]]<-gsea
+ 
+}
+
+
+
+## Save gsea results
+
+bind_rows(gsea_list,.id='uu') %>%
+  tibble() %>%
+  separate(uu,c('Cluster','Comparison'),sep='_') %>% 
+  write_excel_csv('write_R/gsea.csv',delim=';')
+
+
+## Make lollipop plot
+
+
+library(ggh4x)
+library(tidytext)
+
+
+bind_rows(gsea_list,.id='uu') %>%
+  tibble() %>%
+  separate(uu,c('Cluster','Comparison'),sep='_') %>% 
+## OPTIONAL select pathway to show
+# filter(pathway%in%CHOSENPATHWAY) %>% 
+#########################################---##
+  mutate(pathway=str_trunc(pathway,40)) %>% 
+  mutate(Cluster=as.character(Cluster)) %>%
+  mutate(ct=factor(ct,levels=unique(ct[order(Cluster)]))) %>%
+  mutate(pathway=reorder_within(pathway,NES,list(Comparison,Cluster))) %>% 
+  ggplot(aes(x=NES,y=pathway))+
+  geom_segment(aes(xend=0,yend=pathway))+
+  geom_point(aes(fill=Cluster),size=3,shape=21)+
+  geom_vline(xintercept = 0,linetype=2)+
+  ylab('Pathway')+
+  scale_y_reordered()+
+  scale_fill_manual(values=palcluster)+
+  theme_bw()+
+  theme(legend.position ="None",
+        strip.background = element_blank(),
+        axis.title = element_text(face="bold",size=15),
+        axis.text = element_text(face='bold'),
+        axis.text.y = ggtext::element_markdown(),
+        strip.text = element_text(face = "bold",size=12.5),
+        ggh4x.facet.nestline = element_line(colour = "black"))+
+  facet_nested(Comparison*ct~.,scale='free_y',space='free_y',nest_line = element_line(linetype = 1))
+
+
+## Save
+ggsave('image/GSEA_long.png',dpi=300,height = 12,width=6)
 
 
