@@ -1,4 +1,4 @@
-# scRNAseq_MABSC-PD
+# scRNAseq_MABSC
 
 Scripts for SingleCell RNAseq data anlysis.
 Paper under review
