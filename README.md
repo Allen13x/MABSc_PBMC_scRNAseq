@@ -3,7 +3,7 @@
 Scripts for SingleCell RNAseq data anlysis.
 Paper under review
 
-## R scripts sctructure:
+## R scripts structure:
 
 1: Data preparation and integration starting from STAR counts matrix.
 
