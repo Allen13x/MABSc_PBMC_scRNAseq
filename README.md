@@ -1,4 +1,4 @@
-# scRNAseq - 
+# scRNAseq
 
 Scripts for SingleCell RNAseq data anlysis.
 Paper under review
