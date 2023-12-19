@@ -34,7 +34,7 @@ INPUT='PATH_TO_COUNTMATRIXES/'
 
 #### Create a vector for indexing the samples
 
-sample<-c(1,2,3,4,5,6,9,12,13,14,15)
+sample<-c(1,3,4,5,6,9,12,13,14,15)
 
 datasc<-list()
 

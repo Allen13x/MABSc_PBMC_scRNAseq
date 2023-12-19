@@ -61,10 +61,10 @@ DimPlot(scdata, reduction = "umap", label = TRUE, repel = TRUE)
 scdata@meta.data %>% 
   rownames_to_column('CellID') %>% 
   mutate(sample=orig.ident,
-         Groups=case_when(sample%in%c(1,2,12,13)~'MABSC-PD',
+         Groups=case_when(sample%in%c(1,12,13)~'MABSC-PD',
                           sampel%in%c(3,4,9)~'MABSC',
                           sample%in%c(5,6,14,15)~'CF'),
-         sample_f=factor(as.character(sample),levels = as.character(c(5,6,14,15,3,4,9,1,2,12,13))),
+         sample_f=factor(as.character(sample),levels = as.character(c(5,6,14,15,3,4,9,1,12,13))),
          Groups_f=factor(Groups,levels('CF','MABSC','MABSC-PD'))) %>% 
   column_to_rownames('CellID')->scdata@meta.data
 
@@ -119,6 +119,9 @@ scdata$celltype<-plyr::mapvalues(scdata$seurat_clusters,
 
 ## Umap by groups
 
+
+
+
 DimPlot(scdata,split.by = 'Groups_f',group.by = 'Groups_f',cols=c('green4','#e69f11','#b11600'))+
   ggtitle('')
 
@@ -128,6 +131,8 @@ ggsave('images/UMAP_groups.png',dpi=300,height = 5,width = 10)
 ## Umaps celltype
 
 palcluster<-c("#0075DC","#9DCC00","#A588FF","#2BCE48","#005C31","#00998F","#808080","#C20088","#FF5005","#FF0010")
+
+
 
 DimPlot(scdata,group.by = c('celltype'), reduction = "umap", label = TRUE, 
         repel = TRUE,label.box = T,cols=palcluster)
@@ -298,236 +303,8 @@ bind_rows(Deg_list,.id='aa') %>%
 
 
 
-# DEGS matrix -------------------------------------------------------------
 
 
 
-
-
-## Heatmap Deg
-
-
-
-bind_rows(Deg_list,.id='aa') %>% 
-  separate(aa,c('Cluster','Comparison'),sep='_') %>% 
-  filter(p_val_adj<0.05,abs(avg_log2FC)>0.25) %>% 
-  filter(!str_detect(Genes,'^MT|^RP|^AC|^X|^Y|^AL')) %>% 
-  mutate(Comparison=str_replace_all(Comparison,',',' '),
-         Comparison=factor(Comparison,levels=c('MABS+ vs CF',
-                                               'MABS vs CF',
-                                               'MABS-PD vs CF + MABSC',
-                                               'MABS-PD vs CF',
-                                               'MABS-PD vs MABS'))) %>% 
-  dplyr::group_by(Comparison,Cluster) %>% 
-  summarise(n=n()) %>% 
-  ungroup() %>% 
-  
-  mutate(Cluster=plyr::mapvalues(Cluster,
-                                 from = c(1,2,8,4,6,7,3,5,10,9),
-                                 to=c("CD4+ Naive T","CD14+ Monocyte","CD4+ Effector","NK","CD16+ Monocyte","B Cell ","CD8+ Effector ","CD8+ Naive T","DC","Platelet"))
-         
-  ) %>% 
-  dplyr::select(Cluster,Comparison,n) %>% 
-  spread(Cluster,n) %>% 
-  column_to_rownames('Comparison')->final_mat
-
-# DEGS count heatmaps -----------------------------------------------------
-
-
-## Create annotation for viz
-data.frame(g=rownames(final_mat)) %>% 
-  mutate(
-    `MABSC `=c(0,0,1,0,1),
-    `CF `=c(1,1,1,1,0),
-    vs=c(1,1,1,1,1),
-    `MABSC`=c(1,1,0,0,0),
-    `MABSC-PD`=c(1,0,1,1,1)
-  ) %>% 
-  column_to_rownames('g') %>% 
-  mutate_all(as.character)->final_ann
-
-
-## Heatmap
-
-pheatmap(final_mat,display_numbers = T,number_color = 'white', #scale='row',
-         cluster_rows = F,
-         #cluster_cols = F,
-         number_format = "%.d",
-         border_color = 'white',#scale='row',
-         legend=F,
-         annotation_row = final_ann,
-         annotation_names_row=F,
-         annotation_colors = list(vs=c('0'='white','1'='black'),
-                                  `CF `=c('0'='white','1'='green4'),
-                                  `MABSC `=c('0'='white','1'='#e69f11'),
-                                  `MABSC`=c('0'='white','1'='#e69f11'),
-                                  `MABSC-PD`=c('0'='white','1'='#b11600')),
-         labels_row = c('MABSC-PD + MABSC vs CF',
-                        'MABSC vs CF',
-                        'MABSC-PD vs CF + MABSC',
-                        'MABSC-PD vs CF',
-                        'MABSC-PD vs MABSC'),
-         angle_col=45,
-         cex=1.1,
-         fontsize_number = 12,
-         annotation_legend = F,
-         fontsize = 12,
-         filename = 'write_R/hm_degs.png',width=10,height=6,
-         colorRampPalette(c('#2d2296','pink3','#9b1a1c'))(100))
-
-
-# Volcanoplot -------------------------------------------------------------
-
-## Create volcanos for comparisons with more than 130 DEGS
-
-final_mat %>% 
-  rownames_to_column('Comparison') %>% 
-  gather(celltype,degs,-Comparison) %>% 
-  filter(degs>130) %>% 
-  mutate(Cluster=plyr::mapvalues(Cluster,
-                                 to = c(1,2,8,4,6,7,3,5,10,9),
-                                  from=c("CD4+ Naive T","CD14+ Monocyte","CD4+ Effector","NK","CD16+ Monocyte","B Cell ","CD8+ Effector ","CD8+ Naive T","DC","Platelet"))
-         
-  )->Volcanlist
-
-
-## Create volcanoplots
-
-
-for (i in 1:dim(Volcanlist)[1]){
-  
-  j1=str_replace_all(Volcanlist[i,2],' ',',')
-  j2=str_replace_all(Volcanlist[i,2],' ','_')
-  bind_rows(Deg_list,.id='aa') %>% 
-    separate(aa,c('Cluster','Comparison'),sep='_')%>%
-    filter(Comparison==j1) %>% 
-    filter(!str_detect(Genes,'^MT|^RP|^AC|^X|^Y|^AL')) %>%
-    filter(Cluster==Volcanlist[i,1]) %>% column_to_rownames('Genes')->volcanores
-  
-  CDCS=c(volcanores %>% 
-           filter(p_val_adj<0.05) %>% 
-           slice_max(n=5,order_by=avg_log2FC) %>% rownames_to_column('gene') %>% pull(gene),
-         volcanores %>% 
-           filter(p_val_adj<0.05) %>% 
-           slice_min(n=5,order_by=avg_log2FC) %>% rownames_to_column('gene') %>% pull(gene))
-  
-  
-  volcanores %>%
-    mutate(a=abs(avg_log2FC)+0.3) %>%
-    filter(a==max(a)) %>%
-    pull(a)->limx
-  EnhancedVolcano(volcanores,
-                  lab=rownames(volcanores),
-                  selectLab = CDCS,
-                  x='avg_log2FC',
-                  y='p_val',
-                  pCutoff = 0.05,
-                  FCcutoff = 0.2,col=c('black', 'black', 'black', colorspace::darken(palcluster[as.numeric(Volcanlist[i,1])+1],0)),
-                  colAlpha = 1,
-                  title = "",
-                  subtitle='',
-                  drawConnectors = T,
-                  boxedLabels = T,
-                  xlim=c(-limx,limx),
-                  legendPosition = 'right')+
-    theme(legend.position = 'None')
-  dir.create(paste('image/',j2,sep=''))
-  ggsave(paste('image/',j2,'/','volcanoplot_',Volcanlist[i,1],'.png',sep=''),dpi=300,height=5,width=9)
-  
-}
-
-
-# GSEA --------------------------------------------------------------------
-
-## Create GSEA database
-
-## Download your Pathway dataset --- we use this one :
-## https://maayanlab.cloud/Enrichr/geneSetLibrary?mode=text&libraryName=BioPlanet_2019
-###
-read_delim('Bioplanet_2019.txt',delim='|',col_names = c('GO')) %>%
-  mutate(GO=str_remove(GO,'\t'),
-         GO=str_replace(GO,'\t',';')) %>%
-  separate(GO,c('GO','ID'),sep=';') ->GODB
-
-split(GODB %>% 
-        dplyr::select(ID),seq(nrow(GODB%>%dplyr::select(ID))))->GSEA_list
-
-
-names(GSEA_list)<-GODB$GO
-
-
-lapply(GSEA_list,function(x) str_split(str_remove(x,'\t$'),"\t")[[1]])->GSEA_list
-
-
-gsea_list<-list()
-
-for (i in 1:dim(Volcanlist)[1]){
-  
-  z1=str_replace_all(Volcanlist[i,2],' ',',')
-  z2=str_replace_all(Volcanlist[i,2],' ','_')
-  bind_rows(Deg_list,.id='aa') %>% 
-    separate(aa,c('Cluster','Comparison'),sep='_')%>%
-    filter(Comparison==z1) %>% 
-    filter(!str_detect(Genes,'^MT|^RP|^AC|^X|^Y|^AL')) %>%
-    filter(Cluster==Volcanlist[i,1]) %>%
-    arrange(desc(avg_log2FC)) %>% 
-    pull(avg_log2FC,name=Genes)->val_ordered
-
-  index=paste(Volcanlist[i,1],z1,sep='_')
-  print(index)
-  fgsea(GSEA_list,
-        val_ordered)->gsea
-  
-  gsea_list[[index]]<-gsea
- 
-}
-
-
-
-## Save gsea results
-
-bind_rows(gsea_list,.id='uu') %>%
-  tibble() %>%
-  separate(uu,c('Cluster','Comparison'),sep='_') %>% 
-  write_excel_csv('write_R/gsea.csv',delim=';')
-
-
-## Make lollipop plot
-
-
-library(ggh4x)
-library(tidytext)
-
-
-bind_rows(gsea_list,.id='uu') %>%
-  tibble() %>%
-  separate(uu,c('Cluster','Comparison'),sep='_') %>% 
-## OPTIONAL select pathway to show
-# filter(pathway%in%CHOSENPATHWAY) %>% 
-#########################################---##
-  mutate(pathway=str_trunc(pathway,40)) %>% 
-  mutate(Cluster=as.character(Cluster)) %>%
-  mutate(ct=factor(ct,levels=unique(ct[order(Cluster)]))) %>%
-  mutate(pathway=reorder_within(pathway,NES,list(Comparison,Cluster))) %>% 
-  ggplot(aes(x=NES,y=pathway))+
-  geom_segment(aes(xend=0,yend=pathway))+
-  geom_point(aes(fill=Cluster),size=3,shape=21)+
-  geom_vline(xintercept = 0,linetype=2)+
-  ylab('Pathway')+
-  scale_y_reordered()+
-  scale_fill_manual(values=palcluster)+
-  theme_bw()+
-  theme(legend.position ="None",
-        strip.background = element_blank(),
-        axis.title = element_text(face="bold",size=15),
-        axis.text = element_text(face='bold'),
-        axis.text.y = ggtext::element_markdown(),
-        strip.text = element_text(face = "bold",size=12.5),
-        ggh4x.facet.nestline = element_line(colour = "black"))+
-  facet_nested(Comparison*ct~.,scale='free_y',space='free_y',nest_line = element_line(linetype = 1))
-
-
-## Save
-ggsave('image/GSEA_long.png',dpi=300,height = 12,width=6)
 
 
