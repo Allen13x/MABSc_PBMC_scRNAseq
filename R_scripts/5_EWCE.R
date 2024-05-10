@@ -63,6 +63,7 @@ res_MAC <- results(dds_MAC)
 res_MABs <- results(dds_MABs)
 
 save(res, res_MAC, res_MABs, file = 'GSE205161_res.rda')
+save(dds, dds_MAC, dds_MABs, file = 'GSE205161_dds.rda')
 # 
 library(EWCE)
 library(Seurat)
