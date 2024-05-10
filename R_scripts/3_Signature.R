@@ -47,6 +47,8 @@ Deg_list%>%
   filter(n()==2,fold) %>% 
   ungroup() %>% dplyr::select(Genes) %>% distinct() %>% pull(Genes)->sig_gene1
 
+saveRDS(sig_gene1, file = 'sig_gene1.rds')
+
 
 # Subset Cluster 1 --------------------------------------------------------
 
