@@ -15,3 +15,5 @@ Paper under review
 
 5: Deconvolution of an external bulk dataset using EWCE
 
+6: GSEA analysis on the external bulk dataset using EWCE
+
