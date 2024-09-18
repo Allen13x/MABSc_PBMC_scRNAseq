@@ -1,7 +1,9 @@
-# scRNAseq
+# Single-Cell RNA Sequencing of PMBC from Cystic Fibrosis patients
 
-Scripts for SingleCell RNAseq data anlysis.
-Paper under review
+This repository contains the code used for analysis: 
+
+[_Single-Cell RNA Sequencing Shows that Circulating Monocytes Enriched in IFN Signaling Are Associated with Nontuberculous Mycobacteria Pulmonary Disease in Cystic Fibrosis_](https://doi.org/10.1164/rccm.202312-2279le)
+
 
 ## R scripts structure:
 
@@ -16,4 +18,10 @@ Paper under review
 5: Deconvolution of an external bulk dataset using EWCE
 
 6: GSEA analysis on the external bulk dataset using EWCE
+
+## Data available:
+
+GEO: [GSE234785](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE234785)
+
+
 
